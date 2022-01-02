@@ -146,6 +146,7 @@ C_SRCS += main.c
 C_SRCS += LT24_utils.c
 C_SRCS += SD_utils.c
 C_SRCS += i2c/i2c.c
+C_SRCS += camera_utils.c
 CXX_SRCS :=
 ASM_SRCS :=
 
