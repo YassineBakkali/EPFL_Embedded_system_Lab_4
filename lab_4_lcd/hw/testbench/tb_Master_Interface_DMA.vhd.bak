@@ -1,0 +1,85 @@
+library IEEE;
+
+use IEEE.std_logic_1164.all;
+use IEEE.numeric_std.all;
+
+
+entity tb_master_interface_DMA is
+end tb_master_interface_DMA;
+
+architecture test of tb_master_interface_DMA is
+	
+			constant CLK_PERIOD : time := 20 ns;
+
+			signal clk : std_logic;
+			signal nReset : std_logic;
+			
+			signal am_waitrequest   : std_logic;                      --              
+			signal am_address       : std_logic_vector(31 downto 0);  --              
+			signal am_read          : std_logic;                      --              
+			signal am_readdata      : std_logic_vector(31 downto 0);  -- 
+			signal am_readdatavalid : std_logic;                      --
+			signal am_burstcount	   : std_logic_vector(7 downto 0);	  --
+			signal am_byteenable 	: std_logic_vector(3 downto 0);   --
+			
+			signal FIFO_almost_full : std_logic;  					 	  --
+			signal FIFO_data 			: std_logic_vector(15 downto 0);  --
+			signal FIFO_wrreq		   : std_logic;							  --
+			
+			signal start_in			: std_logic;                       --
+			signal start_address_in : std_logic_vector(31 downto 0);   --
+			signal burst_tot_in		: std_logic_vector(7 downto 0);    --
+			
+			begin
+--	Instantiate DUT
+	dut : entity work.master_interface
+		port map(clk => clk,
+					nReset => nReset,
+					 am_waitrequest => am_waitrequest,
+					 am_address => am_address,
+					 am_read => am_read,
+					 am_readdata => am_readdata,
+					 am_readdatavalid => am_readdatavalid,
+					 am_burstcount => am_burstcount,
+					 am_byteenable => am_byteenable,
+					 FIFO_almost_full => FIFO_almost_full,
+					 FIFO_data => FIFO_data,	
+					 start_in => start_in,
+					 start_address_in => start_address_in,
+					 burst_tot_in => burst_tot_in);
+					 
+	 clk_generation : process
+    begin
+        clk <= '1';
+        wait for CLK_PERIOD / 2;
+        clk <= '0';
+        wait for CLK_PERIOD / 2;
+    end process clk_generation;
+	 
+	 simulation : process
+    begin
+	 
+	 -- Init
+    nReset <= '0';
+    wait for CLK_PERIOD;
+    nReset <= '1';
+    wait for CLK_PERIOD;
+	 
+	 am_waitrequest <= '0';
+	 am_readdatavalid <= '1';
+	 am_readdata <= x"FFFF0000";
+	 FIFO_almost_full <= '0';
+	 
+    start_address_in <= x"0000014B";
+    burst_tot_in <= x"08"; 
+    wait for CLK_PERIOD;	 
+    start_in <= '1' ;
+    wait for CLK_PERIOD*2;
+    start_in <= '0';
+    wait for CLK_PERIOD*55000;
+    FIFO_almost_full <= '1';
+    wait for CLK_PERIOD*1000;
+    FIFO_almost_full <= '0';
+    wait for CLK_PERIOD*55000;
+	 end process simulation;
+end architecture test;

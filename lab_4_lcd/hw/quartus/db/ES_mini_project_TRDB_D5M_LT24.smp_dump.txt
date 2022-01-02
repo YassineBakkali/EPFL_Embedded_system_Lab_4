@@ -1,0 +1,35 @@
+
+State Machine - |DE0_Nano_SoC_TRDB_D5M_LT24_top_level|soc_system:u0|soc_system_mm_interconnect_0:mm_interconnect_0|altera_merlin_burst_adapter:address_span_extender_0_windowed_slave_burst_adapter|altera_merlin_burst_adapter_13_1:altera_merlin_burst_adapter_13_1.burst_adapter|state
+Name state.ST_IDLE state.ST_UNCOMP_WR_SUBBURST state.ST_UNCOMP_TRANS state.ST_COMP_TRANS 
+state.ST_IDLE 0 0 0 0 
+state.ST_COMP_TRANS 1 0 0 1 
+state.ST_UNCOMP_TRANS 1 0 1 0 
+state.ST_UNCOMP_WR_SUBBURST 1 1 0 0 
+
+State Machine - |DE0_Nano_SoC_TRDB_D5M_LT24_top_level|soc_system:u0|LCD_controller:lcd_controller_0|LT24_Interface:LT24_Interface_inst|state
+Name state.CHECK_TRANSFER state.CHECK_FIFO state.WAIT_TRANSFER state.DISPLAY state.WRITE_DATA state.WRITE_CMD state.INIT 
+state.INIT 0 0 0 0 0 0 0 
+state.WRITE_CMD 0 0 0 0 0 1 1 
+state.WRITE_DATA 0 0 0 0 1 0 1 
+state.DISPLAY 0 0 0 1 0 0 1 
+state.WAIT_TRANSFER 0 0 1 0 0 0 1 
+state.CHECK_FIFO 0 1 0 0 0 0 1 
+state.CHECK_TRANSFER 1 0 0 0 0 0 1 
+
+State Machine - |DE0_Nano_SoC_TRDB_D5M_LT24_top_level|soc_system:u0|LCD_controller:lcd_controller_0|Master_Interface_DMA:Master_Interface_DMA_inst|state
+Name state.WAIT_DISPLAY state.VERIFY_ADDRESS state.READ_DATA state.READ_REQUEST state.IDLE state.INIT 
+state.INIT 0 0 0 0 0 0 
+state.IDLE 0 0 0 0 1 1 
+state.READ_REQUEST 0 0 0 1 0 1 
+state.READ_DATA 0 0 1 0 0 1 
+state.VERIFY_ADDRESS 0 1 0 0 0 1 
+state.WAIT_DISPLAY 1 0 0 0 0 1 
+
+State Machine - |DE0_Nano_SoC_TRDB_D5M_LT24_top_level|soc_system:u0|soc_system_nios2_gen2_0:nios2_gen2_0|soc_system_nios2_gen2_0_cpu:cpu|soc_system_nios2_gen2_0_cpu_nios2_oci:the_soc_system_nios2_gen2_0_cpu_nios2_oci|soc_system_nios2_gen2_0_cpu_debug_slave_wrapper:the_soc_system_nios2_gen2_0_cpu_debug_slave_wrapper|soc_system_nios2_gen2_0_cpu_debug_slave_tck:the_soc_system_nios2_gen2_0_cpu_debug_slave_tck|DRsize
+Name DRsize.101 DRsize.100 DRsize.011 DRsize.010 DRsize.001 DRsize.000 
+DRsize.000 0 0 0 0 0 0 
+DRsize.001 0 0 0 0 1 1 
+DRsize.010 0 0 0 1 0 1 
+DRsize.011 0 0 1 0 0 1 
+DRsize.100 0 1 0 0 0 1 
+DRsize.101 1 0 0 0 0 1 
