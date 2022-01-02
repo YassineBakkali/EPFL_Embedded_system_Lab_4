@@ -1,0 +1,20 @@
+Fitter Status : Successful - Sat Jan 01 21:40:12 2022
+Quartus Prime Version : 18.1.0 Build 625 09/12/2018 SJ Lite Edition
+Revision Name : ES_mini_project_TRDB_D5M_LT24
+Top-level Entity Name : DE0_Nano_SoC_TRDB_D5M_LT24_top_level
+Family : Cyclone V
+Device : 5CSEMA4U23C6
+Timing Models : Final
+Logic utilization (in ALMs) : 3,157 / 15,880 ( 20 % )
+Total registers : 6627
+Total pins : 207 / 314 ( 66 % )
+Total virtual pins : 0
+Total block memory bits : 2,023,552 / 2,764,800 ( 73 % )
+Total RAM Blocks : 255 / 270 ( 94 % )
+Total DSP Blocks : 3 / 84 ( 4 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 0 / 5 ( 0 % )
+Total DLLs : 1 / 4 ( 25 % )
