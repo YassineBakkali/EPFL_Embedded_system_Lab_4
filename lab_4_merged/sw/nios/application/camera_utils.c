@@ -16,6 +16,14 @@
 #include "system.h"
 #include "io.h"
 
+// Defines
+#define INV_PX_CLK (1<<15)
+#define DIV2_PX_CLK (1<<0)
+#define COLOR_BINNING4 0x0033
+#define INV_TRIG (1<<9)
+#define SNAPSHOT_MODE (1<<8)
+#define TRIGGER (1<<2)
+
 /*===========================================================================*/
 /* Module local functions.                                                   */
 /*===========================================================================*/
@@ -60,27 +68,15 @@ bool trdb_d5m_read(i2c_dev *i2c, uint8_t register_offset, uint16_t *data) {
     }
 }
 
-/**
- * @brief               			Configures address and data length registers.
- * @param[in]   i2c        			i2c device structure.
- */
-void camera_write_registers(i2c_dev i2c){
-
-	IOWR_32DIRECT(0x10000840, 0x00, HPS_0_BRIDGES_BASE); // address
-	IOWR_32DIRECT(0x10000840, 0x04, 320*240*4); // data length
-	//reset camera cursor to pixel 0 by i2c
-
-	IOWR_32DIRECT(0x10000840, 0x0C,0); // stop = 0
-	trdb_d5m_write(&i2c, 0x00B, 0x004);//restart sensor at position 0 and software trigger
-}
-
-
 /*===========================================================================*/
 /* Module exported functions.                                                */
 /*===========================================================================*/
 
 
 i2c_dev camera_init(void) {
+	//Avalon configure image storage, address and length
+	IOWR_32DIRECT(0x10000840, 0x00, HPS_0_BRIDGES_BASE); // address
+	IOWR_32DIRECT(0x10000840, 0x04, 320*240*4); // data length
 
 	i2c_dev i2c = i2c_inst((void *) I2C_0_BASE);
 	i2c_init(&i2c, I2C_FREQ);
@@ -88,49 +84,46 @@ i2c_dev camera_init(void) {
 	bool success = true;
 
 	//Write to registers
-	//reset register
-	success &= trdb_d5m_write(&i2c, 0x00D, 0x001);
+
+	//reset the camera
+	success &= trdb_d5m_write(&i2c, 0x00D, 1); //start the reset
+	usleep(1000);
+	success &= trdb_d5m_write(&i2c, 0x00D, 0); //end the reset
 	usleep(1000);
 
-	success &= trdb_d5m_write(&i2c, 0x00D, 0x000);
-	usleep(1000);
-	//register values
-
-	//random thing
-	success &= trdb_d5m_write(&i2c, 0x009, 10000);
-
-	success &= trdb_d5m_write(&i2c, 0x003, 0x077F);
-	success &= trdb_d5m_write(&i2c, 0x004, 0x09FF);
-	success &= trdb_d5m_write(&i2c, 0x00A, 0x8001); //success &= trdb_d5m_write(&i2c, 0x00A, 0x8000);
-	success &= trdb_d5m_write(&i2c, 0x022, 0x0033);
-	success &= trdb_d5m_write(&i2c, 0x023, 0x0033);
+	//configure resolution
+	success &= trdb_d5m_write(&i2c, 0x003, 1919); //1920 colors rows
+	success &= trdb_d5m_write(&i2c, 0x004, 2559); //2560 colors columns
+	success &= trdb_d5m_write(&i2c, 0x00A, INV_PX_CLK | DIV2_PX_CLK); //sample colors on rising edge and divide clock by 2
+	success &= trdb_d5m_write(&i2c, 0x022, COLOR_BINNING4); //row binning by 4
+	success &= trdb_d5m_write(&i2c, 0x023, COLOR_BINNING4); //column binning by 4
 
 	//add RGB gains
-	success &= trdb_d5m_write(&i2c, 0x02b, 0x03F); // green 1
-	success &= trdb_d5m_write(&i2c, 0x02c, 0x0010); //Blue
-	success &= trdb_d5m_write(&i2c, 0x02d, 0x0010);//red
-	success &= trdb_d5m_write(&i2c, 0x02e, 0x03F);//green 2
+	success &= trdb_d5m_write(&i2c, 0x02b, 63); //max analog green 1 gain
+	success &= trdb_d5m_write(&i2c, 0x02c, 4); //blue analog gain
+	success &= trdb_d5m_write(&i2c, 0x02d, 4);//red analog gain
+	success &= trdb_d5m_write(&i2c, 0x02e, 63); //max analog green 2 gain
 
-	//add rgb shift
+	//add RGB offset
 	success &= trdb_d5m_write(&i2c, 0x060, 100);//green 1 offset
 	success &= trdb_d5m_write(&i2c, 0x061, 100);//green 2 offset
 
-	success &= trdb_d5m_write(&i2c, 0x01E, 0x4300); //snapshot mode had 4106 et the end
+	success &= trdb_d5m_write(&i2c, 0x01E, 0x4000 | INV_TRIG | SNAPSHOT_MODE); //snapshot mode and invert trigger
 	printf("Snapshot mode configured \n");
-	usleep(2000000);
+	usleep(20000);
 	return i2c;
 }
 
 
 void camera_capture(i2c_dev i2c){
-
-		camera_write_registers(i2c);
-
+		//start the capture
+		trdb_d5m_write(&i2c, 0x00B, TRIGGER); //triggers the start of capture
+		IOWR_32DIRECT(0x10000840, 0x0C,0); // stop = 0
 		IOWR_32DIRECT(0x10000840, 0x08, 1); // start = 1
 
 		int wait_t= 0;
 		while(IORD_32DIRECT(0x10000840,0x14) == 0){
-			usleep(10000);
+			usleep(1000);
 			++wait_t;
 		}
 
