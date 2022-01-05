@@ -7,7 +7,7 @@
 
 #include <stdio.h>
 
-#define I2C_FREQ              (50000000) /* Clock frequency driving the i2c core: 50 MHz in this example (ADAPT TO YOUR DESIGN) */
+
 #define TRDB_D5M_I2C_ADDRESS  (0xba)
 
 #define TRDB_D5M_0_I2C_0_BASE (0x10000808)   /* i2c base address from system.h (ADAPT TO YOUR DESIGN) */
@@ -43,57 +43,7 @@ bool trdb_d5m_read(i2c_dev *i2c, uint8_t register_offset, uint16_t *data) {
 int main(void) {
 
 
-    i2c_dev i2c = i2c_inst((void *) TRDB_D5M_0_I2C_0_BASE);
-    i2c_init(&i2c, I2C_FREQ);
 
-    bool success = true;
-
-    //Write to registers
-    //reset register
-	success &= trdb_d5m_write(&i2c, 0x00D, 0x001);
-	usleep(1000);
-
-	success &= trdb_d5m_write(&i2c, 0x00D, 0x000);
-	usleep(1000);
-    //register values
-
-	//random thing
-	success &= trdb_d5m_write(&i2c, 0x009, 10000);
-	printf("%d ", success);
-
-    success &= trdb_d5m_write(&i2c, 0x003, 0x077F);
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x004, 0x09FF);
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x00A, 0x8001); //success &= trdb_d5m_write(&i2c, 0x00A, 0x8000);
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x022, 0x0033);
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x023, 0x0033);
-    printf("%d ", success);
-
-    //add RGB gains
-    success &= trdb_d5m_write(&i2c, 0x02b, 0x03F); // green 1
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x02c, 0x0010); //Blue
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x02d, 0x0010);//red
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x02e, 0x03F);//green 2
-    printf("%d ", success);
-
-    //add rgb shift
-    success &= trdb_d5m_write(&i2c, 0x060, 100);//green 1 offset
-    printf("%d ", success);
-    success &= trdb_d5m_write(&i2c, 0x061, 100);//green 2 offset
-    printf("%d ", success);
-
-
-
-
-    success &= trdb_d5m_write(&i2c, 0x01E, 0x4300); //snapshot mode had 4106 et the end
-    printf("Snapshit mode configured \n");
-    usleep(2000000);
     IOWR_32DIRECT(0x10000840, 0x00, HPS_0_BRIDGES_BASE); // address
     IOWR_32DIRECT(0x10000840, 0x04, 320*240*4); // data length
     //reset camera cursor to pixel 0 by i2c

@@ -2,8 +2,8 @@
 <sch:Settings xmlns:sch="http://www.altera.com/embeddedsw/bsp/schema">
         <BspType>hal</BspType>
         <BspVersion>default</BspVersion>
-        <BspGeneratedTimeStamp>2 janv. 2022 17:28:52</BspGeneratedTimeStamp>
-        <BspGeneratedUnixTimeStamp>1641140932331</BspGeneratedUnixTimeStamp>
+        <BspGeneratedTimeStamp>5 janv. 2022 23:05:24</BspGeneratedTimeStamp>
+        <BspGeneratedUnixTimeStamp>1641420324240</BspGeneratedUnixTimeStamp>
         <BspGeneratedLocation>C:\PROG_EPFL\Lab_4_after_merge\lab_4_merged\sw\nios\lab4_merged_bsp</BspGeneratedLocation>
         <BspSettingsFile>settings.bsp</BspSettingsFile>
         <SopcDesignFile>C:\PROG_EPFL\Lab_4_after_merge\lab_4_merged\hw\quartus\soc_system.sopcinfo</SopcDesignFile>
@@ -875,6 +875,18 @@
                 <Group>none</Group>
         </Setting>
         <Setting>
+                <SettingName>altera_hostfs.hostfs_name</SettingName>
+                <Identifier>ALTERA_HOSTFS_NAME</Identifier>
+                <Type>QuotedString</Type>
+                <Value>/mnt/host</Value>
+                <DefaultValue>/mnt/host</DefaultValue>
+                <DestinationFile>system_h_define</DestinationFile>
+                <Description>Mount point</Description>
+                <Restrictions>none</Restrictions>
+                <Enabled>false</Enabled>
+                <Group xsi:nil="true" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"/>
+        </Setting>
+        <Setting>
                 <SettingName>altera_avalon_jtag_uart_driver.enable_small_driver</SettingName>
                 <Identifier>ALTERA_AVALON_JTAG_UART_SMALL</Identifier>
                 <Type>BooleanDefineOnly</Type>
@@ -958,4 +970,8 @@
                 <sectionName>.stack</sectionName>
                 <regionName>onchip_memory2_0</regionName>
         </LinkerSection>
+        <SoftwarePackageInfo>
+                <name>altera_hostfs</name>
+                <version>default</version>
+        </SoftwarePackageInfo>
 </sch:Settings>

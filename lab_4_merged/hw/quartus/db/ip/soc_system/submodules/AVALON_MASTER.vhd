@@ -33,14 +33,13 @@ ARCHITECTURE comp1 OF D5M_MASTER IS
 	SIGNAL STATE : Mas_State := IDLE;
 
 	-- internal signals
-	--SIGNAL frameSent : STD_LOGIC := '0';
 	SIGNAL startAddr_bridge : STD_LOGIC_VECTOR(32 - 1 DOWNTO 0);
 	SIGNAL datalength_bridge : STD_LOGIC_VECTOR(32 - 1 DOWNTO 0) := x"0004B000";
 	
 BEGIN
 
 	--SIGNALS
-	avm_m0_byteenable <= b"1111";
+	avm_m0_byteenable <= b"1111"; --always write 32 bits at a time
 	
 	--FSM PROCESS
 	PROCESS (csi_clk, rsi_reset_n, start_address_i, data_length_i)
@@ -58,7 +57,7 @@ BEGIN
 						frame_sent_o <= '0';
 						IF unsigned(data_length_i) = 0 THEN
 							STATE <= IDLE;
-						ELSIF BUFFER_FIFO_EMPTY_i = '0' THEN
+						ELSIF BUFFER_FIFO_EMPTY_i = '0' THEN -- if FIFO is not empty, it changes states to try to write it
 							STATE <= WAITING_WRITE;
 							avm_m0_address <= startAddr_bridge;
 							avm_m0_write <= '1';
@@ -66,11 +65,11 @@ BEGIN
 						END IF;
 					WHEN WAITING_WRITE => 
 						IF unsigned(datalength_bridge) /= 0 THEN
-							IF BUFFER_FIFO_EMPTY_i = '0' THEN -- still values in fifo
+							IF BUFFER_FIFO_EMPTY_i = '0' THEN -- while FIFO is not empty, it tries to write to the avalon bus
 								avm_m0_write <= '1';
 								avm_m0_address <= startAddr_bridge;
 								avm_m0_writedata <= DATA_i;
-								IF avm_m0_waitrequest = '0' THEN --TODO check
+								IF avm_m0_waitrequest = '0' THEN --it acknowledges that the data is sent prepares the next data
 									BUFFER_FIFO_RREQ_o <= '1';
 									startAddr_bridge <= std_logic_vector(unsigned(startAddr_bridge) + 4);
 									datalength_bridge <= std_logic_vector(unsigned(datalength_bridge) - 4);
@@ -83,33 +82,18 @@ BEGIN
 								BUFFER_FIFO_RREQ_o <= '0';
 							END IF;
 							frame_sent_o <= '0';
-						ELSE
+						ELSE --it has finished writing a full image, loads new address and length
 							STATE <= WAITING_DATA;
 							startAddr_bridge <= start_address_i;
 							datalength_bridge <= data_length_i;
+							avm_m0_write <= '0';
+							BUFFER_FIFO_RREQ_o <= '0';
 							frame_sent_o <= '1';
 						END IF;
---					WHEN BURST_WRITE_DATA =>
---						IF avm_m0_waitrequest = '0' THEN
---							IF BUFFER_FIFO_EMPTY_i = '1' THEN --TODO change maybe
---								STATE <= WAITING_DATA;
---							ELSE
---								DataAck <= '0';
---								IF CntLength /= 0 THEN -- still has data to send --TODO was /= 1 for some reason
---									startAddr_bridge <= startAddr_bridge + 4;
---									datalength_bridge <= datalength_bridge - 4;
---									frame_sent_o <= '0';
---								ELSE -- frame sending ended
---									startAddr_bridge <= start_address_i;
---									datalength_bridge <= data_length_i;
---									frame_sent_o <= '1';
---								END IF;
---							END IF;
---						END IF;
 				END CASE;
 			END IF;
 		ELSE
-			--reset condition
+			--reset condition, default values
 			STATE <= IDLE;
 			BUFFER_FIFO_RREQ_o <= '0';
 			startAddr_bridge <= (OTHERS => '0');

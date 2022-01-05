@@ -12,25 +12,21 @@ ENTITY D5M_SLAVE IS
 		avs_s0_write : IN STD_LOGIC;
 		avs_s0_read : IN STD_LOGIC;
 		avs_s0_writedata : IN STD_LOGIC_VECTOR(32-1 DOWNTO 0);
-		avs_s0_readdata : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0); -- TODO Attentien ^^'
+		avs_s0_readdata : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 		
 		--with Avalon Master
 		frame_sent_i : IN STD_LOGIC;
 		start_address_o : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 		data_length_o : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 		
-		--with cam interface
+		--with Camera interface
 		start_o : OUT STD_LOGIC;
 		stop_o : OUT STD_LOGIC
 	);
 
 END D5M_SLAVE;
 
-ARCHITECTURE comp0 OF D5M_SLAVE IS
-	-- internal signals
-	SIGNAL frameSent : STD_LOGIC := '0';
-	
-	
+ARCHITECTURE comp0 OF D5M_SLAVE IS	
 	--internal registers
 	SIGNAL iCamAddr : STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 	SIGNAL iCamLength : STD_LOGIC_VECTOR(32-1 DOWNTO 0);
@@ -50,10 +46,8 @@ BEGIN
 	data_length_o <= iCamLength;
 	start_o <= iCamStart(0);
 	stop_o <= iCamStop(0);
-	--iFrameSent(0) <= FrameSent_set or FrameSent_slv;
-	--iFrameSent(8-1 DOWNTO 1) <= (OTHERS => '0');
 	
-	--FrameSent reciever
+	--FrameSent reciever, if it recieves a pulse from the Avalon master that an image was sent, it stores it in the iFrameSent register
 	PROCESS (csi_clk, rsi_reset_n, frame_sent_i)
 	BEGIN
 		IF rsi_reset_n = '1' THEN
@@ -80,14 +74,14 @@ BEGIN
 			iCamStop <= x"00";
 			iCamSnapshot <= x"00";
 		ELSIF rising_edge(csi_clk) THEN
-			IF avs_s0_write = '1' THEN
+			IF avs_s0_write = '1' THEN --writes new values in registers
 				CASE avs_s0_address IS
 					WHEN "0000" => iCamAddr <= avs_s0_writedata;
 					WHEN "0001" => iCamLength <= avs_s0_writedata;
 					WHEN "0010" => iCamStart <= avs_s0_writedata(8-1 DOWNTO 0);
 					WHEN "0011" => iCamStop <= avs_s0_writedata(8-1 DOWNTO 0);
 					WHEN "0100" => iCamSnapshot <= avs_s0_writedata(8-1 DOWNTO 0);
-					WHEN OTHERS => NULL;
+					WHEN OTHERS => NULL; -- you can't manually set the iFrameSent register
 				END CASE;
 			END IF;
 		END IF;
@@ -108,7 +102,7 @@ BEGIN
 						WHEN "0100" => avs_s0_readdata <= std_logic_vector(resize(unsigned(iCamSnapshot),32));
 						WHEN "0101" => avs_s0_readdata <=
 							std_logic_vector(resize(unsigned(iFrameSent),32));
-							FrameSent_rst <= '1';
+							FrameSent_rst <= '1'; --reading the iFrameSent resets it to 0, acts as an acknowledge that the frame was sent to the SDRAM
 						WHEN OTHERS => NULL;
 					END CASE;
 				ELSE
