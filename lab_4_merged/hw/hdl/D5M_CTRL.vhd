@@ -4,14 +4,11 @@ USE ieee.numeric_std.ALL;
 
 ENTITY D5M_CONTROLLER IS
 	PORT (
-		-- with Camera
+		-- with Camera (conduit)
 		GPIO_1_D5M_D : IN STD_LOGIC_VECTOR(11 DOWNTO 0);
 		GPIO_1_D5M_FVAL : IN STD_LOGIC;
 		GPIO_1_D5M_LVAL : IN STD_LOGIC;
 		GPIO_1_D5M_PIXCLK : IN STD_LOGIC;
-		--GPIO_1_D5M_RESET_N : OUT STD_LOGIC;
-		--GPIO_1_D5M_TRIGGER : out   std_logic;
-		--GPIO_1_D5M_XCLKIN : OUT STD_LOGIC;
 
 		--with Avalon slave
 		csi_clk : IN STD_LOGIC;
@@ -31,23 +28,9 @@ ARCHITECTURE comp OF D5M_CONTROLLER IS
 	--states
 	TYPE Int_State IS (IDLE, BUSY);
 	SIGNAL STATE : Int_State := IDLE;
-	-- internal signals
-	SIGNAL start_sig : STD_LOGIC := '0';
-	SIGNAL stop_sig : STD_LOGIC := '1';
 
-	--BAYER FIFO SIGNAL
-	SIGNAL q_sig : STD_LOGIC_VECTOR (11 DOWNTO 0);
-	SIGNAL usedw_sig : STD_LOGIC_VECTOR (9 DOWNTO 0);
 
-	SIGNAL data_bridge : STD_LOGIC_VECTOR (12 - 1 DOWNTO 0);
-	--Cam interface
-	SIGNAL pixel_valid : STD_LOGIC := '0';
-	SIGNAL valid_row : STD_LOGIC := '1';
-	SIGNAL downsampling_row_counter : UNSIGNED(12 - 1 DOWNTO 0) := (OTHERS => '0');
-	SIGNAL downsampling_col_counter : UNSIGNED(2 - 1 DOWNTO 0) := (OTHERS => '0');
-	--BUFFER FIFO
-	SIGNAL rdusedw_sig : STD_LOGIC_VECTOR(9 - 1 DOWNTO 0);
-
+	--BAYER FIFO (used for debayering)
 	COMPONENT Bayer_FIFO IS
 		PORT (
 			aclr : IN STD_LOGIC;
@@ -59,7 +42,10 @@ ARCHITECTURE comp OF D5M_CONTROLLER IS
 			usedw : OUT STD_LOGIC_VECTOR (9 DOWNTO 0)
 		);
 	END COMPONENT;
-
+	SIGNAL q_sig : STD_LOGIC_VECTOR (11 DOWNTO 0);
+	SIGNAL usedw_sig : STD_LOGIC_VECTOR (9 DOWNTO 0);
+	
+	--BUFFER FIFO (used as buffer between camera interface and avalon master)
 	COMPONENT Buffer_FIFO IS
 		PORT (
 			aclr : IN STD_LOGIC;
@@ -73,10 +59,18 @@ ARCHITECTURE comp OF D5M_CONTROLLER IS
 			rdusedw : OUT STD_LOGIC_VECTOR (8 DOWNTO 0)
 		);
 	END COMPONENT;
+	SIGNAL rdusedw_sig : STD_LOGIC_VECTOR(9 - 1 DOWNTO 0);
+
+	--DOWNSAMPLING
+	SIGNAL pixel_valid : STD_LOGIC := '0';
+	SIGNAL data_bridge : STD_LOGIC_VECTOR (12 - 1 DOWNTO 0);
+	SIGNAL valid_row : STD_LOGIC := '1';
+	SIGNAL downsampling_row_counter : UNSIGNED(12 - 1 DOWNTO 0) := (OTHERS => '0');
+	SIGNAL downsampling_col_counter : UNSIGNED(2 - 1 DOWNTO 0) := (OTHERS => '0');
 
 	--DEBAYERING
 	SIGNAL fifo_clr : STD_LOGIC := '0';
-	SIGNAL bayer_fifo_push : STD_LOGIC := '0';-- was 1 TODO
+	SIGNAL bayer_fifo_push : STD_LOGIC := '0';
 	SIGNAL bayer_fifo_pop : STD_LOGIC := '0';
 	SIGNAL push_state : STD_LOGIC := '1';
 	SIGNAL color_ready : STD_LOGIC := '0';
@@ -109,14 +103,10 @@ BEGIN
 	);
 
 	--SIGNALS
-	--GPIO_1_D5M_RESET_N <= rsi_reset_n;
-	--GPIO_1_D5M_XCLKIN <= csi_clk;
 	fifo_clr <= '1' WHEN rsi_reset_n = '0' OR STATE = IDLE ELSE
 		'0';
 	bayer_fifo_push <= push_state AND pixel_valid;
 	bayer_fifo_pop <= NOT(push_state) AND pixel_valid;
-	--start_sig <= start and not(stop);
-	--stop_sig <= stop;
 
 	--State machine Process
 	PROCESS (GPIO_1_D5M_PIXCLK, start_i, stop_i)
@@ -140,7 +130,8 @@ BEGIN
 		END IF;
 	END PROCESS;
 
-	--DownSampler process
+	--DownSampling process
+	--will take two pixels then skip two and so on, and the same for the rows (take two first, skip the two next etc)
 	PROCESS (GPIO_1_D5M_PIXCLK, GPIO_1_D5M_FVAL, GPIO_1_D5M_LVAL, GPIO_1_D5M_D, rsi_reset_n, downsampling_row_counter, valid_row)
 	BEGIN
 		IF rsi_reset_n = '1' AND STATE = BUSY THEN
@@ -148,14 +139,13 @@ BEGIN
 				data_bridge <= GPIO_1_D5M_D;
 				IF GPIO_1_D5M_FVAL = '1' AND GPIO_1_D5M_LVAL = '1' THEN
 					downsampling_row_counter <= downsampling_row_counter + 1;
-					downsampling_col_counter <= downsampling_col_counter + 1; -- TODO maybe do after the next line
+					downsampling_col_counter <= downsampling_col_counter + 1;
 
-					IF downsampling_row_counter = x"9FF" THEN -- divide by 2560
-						--valid_row <= NOT(valid_row);
+					IF downsampling_row_counter = x"9FF" THEN -- divide by 2560, to skip rows
 						downsampling_row_counter <= (OTHERS => '0');
 					END IF;
 
-					IF downsampling_col_counter = b"11" THEN -- divide by 4
+					IF downsampling_col_counter = b"11" THEN -- divide by 4, to skip columns
 						downsampling_col_counter <= (OTHERS => '0');
 					END IF;
 
@@ -164,8 +154,6 @@ BEGIN
 					ELSE
 						pixel_valid <= '0';
 					END IF;
-					--bayer_fifo_push <= push_state AND pixel_valid;
-					--bayer_fifo_pop <= NOT(push_state) AND pixel_valid;
 				ELSE
 					pixel_valid <= '0';
 				END IF;
@@ -176,32 +164,32 @@ BEGIN
 			downsampling_row_counter <= (OTHERS => '0');
 			downsampling_col_counter <= (OTHERS => '0');
 			valid_row <= '1';
-			--bayer_fifo_push <= '0';
-			--bayer_fifo_pop <= '0';
-			--push_state <= '1';
 		END IF;
 	END PROCESS;
+	
 	--Debayering Process
-	--WARNING BLACK MAGIC IN THERE, DON'T WASTE YOUR TIME :)
 	PROCESS (GPIO_1_D5M_PIXCLK, GPIO_1_D5M_D, pixel_valid)
 	BEGIN
 		IF rsi_reset_n = '1' AND STATE = BUSY THEN
 			IF rising_edge(GPIO_1_D5M_PIXCLK) THEN
-				IF usedw_sig = b"1010000000" THEN -- when 640 reached -> pop fifo
+				-- when 640 reached -> first line is read: starts poping from fifo when valid pixels
+				IF usedw_sig = b"1010000000" THEN
 					push_state <= '0';
-				ELSIF usedw_sig = b"0000000000" THEN -- when 0 reached -> push fifo
+				-- when 0 reached -> second line is read: starts pushing in fifo when valid pixels
+				ELSIF usedw_sig = b"0000000000" THEN
 					push_state <= '1';
 				END IF;
 
 				IF push_state = '0' AND pixel_valid = '1' THEN
-					--pops bayer data and combines with reading to push in buffer fifo
+					--pops bayer data and combines with live readings. Pushes result in buffer fifo
+					--takes only the most significant bits, from the 12 camera bits to 5 for blue and red and 6 for red
 					IF usedw_sig(0) = '0' THEN --B is read, G1 pops
 						output_color(5 - 1 DOWNTO 0) <= unsigned(data_bridge(12 - 1 DOWNTO 7));
 						output_color(10 - 1 DOWNTO 5) <= unsigned(q_sig(12 - 1 DOWNTO 7));
-					ELSE --G2 is read, R pops
+					ELSE --G2 is read and added to G1, R pops
 						output_color(11 - 1 DOWNTO 5) <= resize(output_color(10 - 1 DOWNTO 5), 6) + unsigned(data_bridge(12 - 1 DOWNTO 7));
 						output_color(16 - 1 DOWNTO 11) <= unsigned(q_sig(12 - 1 DOWNTO 7));
-						color_ready <= '1';
+						color_ready <= '1'; --color is ready to be pushed in the buffer fifo
 					END IF;
 				END IF;
 				IF color_ready = '1' THEN
@@ -215,6 +203,7 @@ BEGIN
 			output_color <= (OTHERS => '0');
 		END IF;
 	END PROCESS;
+	
 	--BUFFER FIFO Process
 	PROCESS (GPIO_1_D5M_PIXCLK, color_ready)
 	BEGIN

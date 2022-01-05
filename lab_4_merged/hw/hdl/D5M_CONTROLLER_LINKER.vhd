@@ -2,6 +2,9 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.numeric_std.ALL;
 
+
+--Just links all components together
+
 ENTITY D5M_CONTROLLER_LINKER IS
 	PORT (
 		csi_clk : IN STD_LOGIC;
@@ -21,7 +24,7 @@ ENTITY D5M_CONTROLLER_LINKER IS
 		avs_s0_write : IN STD_LOGIC;
 		avs_s0_read : IN STD_LOGIC;
 		avs_s0_writedata : IN STD_LOGIC_VECTOR(32-1 DOWNTO 0);
-		avs_s0_readdata : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0); -- TODO Attentien ^^'
+		avs_s0_readdata : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 		
 		-- Avalon master interface
 		avm_m0_address : OUT STD_LOGIC_VECTOR(31 DOWNTO 0);
@@ -42,13 +45,11 @@ ARCHITECTURE comp2 OF D5M_CONTROLLER_LINKER IS
 		
 		-- External interface (i.e. conduit).
 		GPIO_1_D5M_D       : in    std_logic_vector(11 downto 0);
-      GPIO_1_D5M_FVAL    : in    std_logic;
-      GPIO_1_D5M_LVAL    : in    std_logic;
-      GPIO_1_D5M_PIXCLK  : in    std_logic;
-      --GPIO_1_D5M_RESET_N : out   std_logic;
-      --GPIO_1_D5M_TRIGGER : out   std_logic;
-      --GPIO_1_D5M_XCLKIN  : out   std_logic;
+	        GPIO_1_D5M_FVAL    : in    std_logic;
+	        GPIO_1_D5M_LVAL    : in    std_logic;
+	        GPIO_1_D5M_PIXCLK  : in    std_logic;
 		
+		--with Camera interface
 		start_i : in STD_LOGIC;
 		stop_i : in STD_LOGIC;
 		
@@ -77,7 +78,7 @@ ARCHITECTURE comp2 OF D5M_CONTROLLER_LINKER IS
 		start_address_o : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 		data_length_o : OUT STD_LOGIC_VECTOR(32-1 DOWNTO 0);
 
-		--with cam interface
+		--with Camera interface
 		start_o : OUT STD_LOGIC;
 		stop_o : OUT STD_LOGIC
 	);
@@ -111,14 +112,17 @@ ARCHITECTURE comp2 OF D5M_CONTROLLER_LINKER IS
 	END component;
 
 	--SIGNALS
+	--Avalon Master - Camera Interface
 	SIGNAL DATA_sig : STD_LOGIC_VECTOR(32 - 1 DOWNTO 0) := (OTHERS => '0');
 	SIGNAL BUFFER_FIFO_EMPTY_sig : STD_LOGIC := '0';
 	SIGNAL BUFFER_FIFO_RREQ_sig : STD_LOGIC := '0';
 
+	--Avalon Master - Avalon Slave
 	SIGNAL frame_sent_sig : STD_LOGIC := '0';
 	SIGNAL start_address_sig : STD_LOGIC_VECTOR(32 - 1 DOWNTO 0) := (OTHERS => '0');
 	SIGNAL data_length_sig : STD_LOGIC_VECTOR(32 - 1 DOWNTO 0) := (OTHERS => '0');
 
+	--Avalon Slave - Camera Interface
 	SIGNAL start_sig : STD_LOGIC := '0';
 	SIGNAL stop_sig : STD_LOGIC := '0';
 	
@@ -131,12 +135,18 @@ BEGIN
 	CAM_INTERFACE_inst : COMPONENT D5M_CONTROLLER PORT MAP (
 		csi_clk => csi_clk,
 		rsi_reset_n => rsi_reset_n,
+		
+		--with the camera (conduits)
 		GPIO_1_D5M_D => GPIO_1_D5M_D,
       		GPIO_1_D5M_FVAL => GPIO_1_D5M_FVAL,
       		GPIO_1_D5M_LVAL => GPIO_1_D5M_LVAL,
       		GPIO_1_D5M_PIXCLK => GPIO_1_D5M_PIXCLK,
+      		
+      		--with Avalon Slave
 		start_i => start_sig,
 		stop_i => stop_sig,
+		
+		--with Avalon Master
 		DATA_o => DATA_sig,
 		BUFFER_FIFO_EMPTY_o => BUFFER_FIFO_EMPTY_sig,
 		BUFFER_FIFO_RREQ_i => BUFFER_FIFO_RREQ_sig
@@ -147,7 +157,7 @@ BEGIN
 		csi_clk => csi_clk,
 		rsi_reset_n => rsi_reset_n,
 		
-		-- Internal interface (i.e. Avalon slave).
+		-- Avalon slave interface
 		avs_s0_address  => avs_s0_address,
 		avs_s0_write  => avs_s0_write,
 		avs_s0_read  => avs_s0_read,
@@ -159,7 +169,7 @@ BEGIN
 		start_address_o  => start_address_sig,
 		data_length_o  => data_length_sig,
 
-		--with cam interface
+		--with camera interface
 		start_o  => start_sig,
 		stop_o  => stop_sig
 	);
